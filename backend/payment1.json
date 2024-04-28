@@ -1,0 +1,61 @@
+{
+    "entity": "event",
+    "account_id": "acc_GLajo0Z5nqdsNR",
+    "event": "payment.captured",
+    "contains": [
+        "payment"
+    ],
+    "payload": {
+        "payment": {
+            "entity": {
+                "id": "pay_O4BligwoBO1yql",
+                "entity": "payment",
+                "amount": 324200,
+                "currency": "INR",
+                "status": "captured",
+                "order_id": "order_O4BlQ2JWiV9VAi",
+                "invoice_id": null,
+                "international": false,
+                "method": "card",
+                "amount_refunded": 0,
+                "refund_status": null,
+                "captured": true,
+                "description": "Thank you. Give me money.",
+                "card_id": "card_O4BlimMcfxZDF6",
+                "card": {
+                    "id": "card_O4BlimMcfxZDF6",
+                    "entity": "card",
+                    "name": "",
+                    "last4": "1111",
+                    "network": "Visa",
+                    "type": "debit",
+                    "issuer": null,
+                    "international": false,
+                    "emi": false,
+                    "sub_type": "consumer",
+                    "token_iin": null
+                },
+                "bank": null,
+                "wallet": null,
+                "vpa": null,
+                "email": "user1@mail.com",
+                "contact": "+918123747961",
+                "notes": [],
+                "fee": 7652,
+                "tax": 1168,
+                "error_code": null,
+                "error_description": null,
+                "error_source": null,
+                "error_step": null,
+                "error_reason": null,
+                "acquirer_data": {
+                    "auth_code": "429080"
+                },
+                "created_at": 1714339286,
+                "reward": null,
+                "base_amount": 324200
+            }
+        }
+    },
+    "created_at": 1714339363
+}
