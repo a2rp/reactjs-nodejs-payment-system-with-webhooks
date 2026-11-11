@@ -11,29 +11,64 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+    background: #f4f7fb;
 
     .main {
         width: 100%;
-        max-width: 1400px;
-        padding: 30px;
+        max-width: 620px;
+        padding: 32px;
+        border: 1px solid #e1e8f0;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 16px 48px rgba(25, 42, 70, 0.1);
 
         .title {
-            font-size: 20px;
-            font-weight: 900;
+            color: #152238;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .description {
+            margin-top: 8px;
+            color: #5f6e82;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
         .form {
-            margin-top: 30px;
+            margin-top: 24px;
             display: flex;
-            gap: 15px;
+            align-items: flex-start;
+            gap: 12px;
 
             .amountInput {
+                flex: 1;
             }
 
             .submitButton {
-                height: 50px;
+                min-width: 150px;
+                height: 56px;
                 overflow: hidden;
-                width: 150px;
+                background: #1455d9;
+                text-transform: none;
+                font-weight: 700;
+            }
+        }
+    }
+}
+
+@media (max-width: 520px) {
+    .container .main {
+        padding: 24px 18px;
+
+        .form {
+            flex-direction: column;
+
+            .amountInput,
+            .submitButton {
+                width: 100%;
             }
         }
     }

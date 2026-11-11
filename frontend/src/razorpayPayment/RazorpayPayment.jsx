@@ -1,133 +1,147 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import styles from "./styles.module.scss";
-import { Button, CircularProgress, FormControl, InputAdornment, InputLabel, OutlinedInput, TextField } from "@mui/material";
+import {
+  Button,
+  CircularProgress,
+  InputAdornment,
+  TextField
+} from "@mui/material";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import { toast } from "react-toastify";
-import axios from "axios";
 
-const RazorpayPayment = () => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [amountInput, setAmountInput] = useState(0);
-    const [amountInputError, setAmountInputError] = useState(0);
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const MIN_AMOUNT = 501;
+const MAX_AMOUNT = 9999;
+const RAZORPAY_CHECKOUT_URL = "https://checkout.razorpay.com/v1/checkout.js";
+let razorpayScriptPromise;
 
-    const handleAmountInputChange = (event) => {
-        const regex = /[^0-9]/ig;
-        const value = event.target.value.replace(regex, "").slice(0, 4);
-        setAmountInput(value);
-        if (value.trim().length === 0) {
-            setAmountInputError("Please enter amount here");
-        } else if (parseInt(value) < 101) {
-            setAmountInputError("Minimum Rs. 501 required");
-        } else {
-            setAmountInputError("");
-        }
+function loadRazorpayScript() {
+  if (window.Razorpay) return Promise.resolve(true);
+  if (razorpayScriptPromise) return razorpayScriptPromise;
+
+  razorpayScriptPromise = new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = RAZORPAY_CHECKOUT_URL;
+    script.onload = () => resolve(true);
+    script.onerror = () => {
+      script.remove();
+      razorpayScriptPromise = undefined;
+      resolve(false);
     };
+    document.body.appendChild(script);
+  });
 
-    function loadScript(src) {
-        return new Promise((resolve) => {
-            const script = document.createElement("script");
-            script.src = src;
-            script.onload = () => {
-                resolve(true);
-            }
-            script.onerror = () => {
-                resolve(false);
-            }
-            document.body.appendChild(script);
-        })
-    }
-
-    async function displayRazorpay() {
-        try {
-            if (amountInputError.length > 0) {
-                return toast.warn("form contains errors");
-            }
-
-            setIsLoading(true);
-            const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
-            if (!res) {
-                return toast.warn("Razorpay SDK failed to load. Are you online?");
-            }
-
-            const config = {
-                url: "/order/create",
-                method: "POST",
-                data: { amount: amountInput }
-            };
-            const response = await axios(config);
-            const data = response.data;
-
-            const options = {
-                key: "rzp_test_C9GWa8qaeB9Rak",
-                currency: data.currency,
-                amount: data.amount.toString(),
-                order_id: data.id,
-                name: "Donation",
-                description: "Thank you. Give me money.",
-                // image: "http://localhost:1337/logo.svg",
-                handler: function (response) {
-                    toast.info("Payment id: " + response.razorpay_payment_id)
-                    toast.info("Order id: " + response.razorpay_order_id)
-                    toast.info("Signature: " + response.razorpay_signature)
-                },
-                prefill: {
-                    name: "Ashish Ranjan",
-                    email: "user1@mail.com",
-                    phone_number: "1111111111"
-                }
-            };
-            const paymentObject = new window.Razorpay(options);
-            paymentObject.open();
-            // test card 4111 1111 1111 1111
-        } catch (error) {
-            console.log(error, "error");
-            toast.error(error.message);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-
-    const handleSubmit = (event) => {
-        event.preventDefault();
-
-        console.log(amountInput, "amount");
-        displayRazorpay();
-    };
-
-    return (
-        <div className={styles.container}>
-            <div className={styles.main}>
-                <div className={styles.title}>Razorpay Payment</div>
-
-                <form onSubmit={handleSubmit} className={styles.form}>
-                    <TextField
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <CurrencyRupeeIcon />
-                                </InputAdornment>
-                            ),
-                        }}
-                        value={amountInput}
-                        onChange={handleAmountInputChange}
-                        className={styles.amountInput}
-                        placeholder="Please enter amount"
-                        label="Amount"
-                        error={amountInputError.length > 0}
-                        helperText={amountInputError.length > 0
-                            ? amountInputError
-                            : ""}
-                    />
-                    <Button
-                        type="submit"
-                        variant="contained"
-                        disabled={isLoading}
-                        className={styles.submitButton}
-                    >{isLoading ? <CircularProgress sx={{ padding: "5px" }} /> : "Make payment"}</Button>
-                </form>
-            </div>
-        </div>
-    )
+  return razorpayScriptPromise;
 }
 
-export default RazorpayPayment
+export default function RazorpayPayment() {
+  const [amount, setAmount] = useState("");
+  const [amountError, setAmountError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  function handleAmountChange(event) {
+    const value = event.target.value.replace(/\D/g, "").slice(0, 4);
+    setAmount(value);
+
+    if (!value) {
+      setAmountError("");
+    } else if (Number(value) < MIN_AMOUNT) {
+      setAmountError(`Minimum amount is ₹${MIN_AMOUNT}.`);
+    } else if (Number(value) > MAX_AMOUNT) {
+      setAmountError(`Maximum amount is ₹${MAX_AMOUNT}.`);
+    } else {
+      setAmountError("");
+    }
+  }
+
+  async function handleCheckoutSuccess(payment) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/order/verify-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payment)
+      });
+      const result = await response.json();
+      if (!response.ok || !result.verified) {
+        throw new Error(result.error || "Payment verification failed.");
+      }
+      toast.success("Payment completed and signature verified.");
+    } catch (error) {
+      toast.error(error.message || "Could not verify the payment.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!amount || Number(amount) < MIN_AMOUNT || Number(amount) > MAX_AMOUNT || amountError) {
+      setAmountError(`Enter an amount from ₹${MIN_AMOUNT} to ₹${MAX_AMOUNT}.`);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) throw new Error("Razorpay Checkout could not load. Check your connection and try again.");
+
+      const orderResponse = await fetch(`${API_BASE_URL}/order/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: Number(amount) })
+      });
+      const order = await orderResponse.json();
+      if (!orderResponse.ok) throw new Error(order.error || "Could not create a payment order.");
+
+      const checkout = new window.Razorpay({
+        key: order.keyId,
+        amount: String(order.amount),
+        currency: order.currency,
+        order_id: order.id,
+        name: "Razorpay Checkout Demo",
+        description: "Test mode checkout example",
+        handler: handleCheckoutSuccess,
+        modal: { ondismiss: () => setIsLoading(false) }
+      });
+
+      checkout.on("payment.failed", () => {
+        toast.error("Payment was not completed. Please try again.");
+        setIsLoading(false);
+      });
+      checkout.open();
+    } catch (error) {
+      toast.error(error.message || "Unable to start checkout.");
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <main className={styles.container}>
+      <section className={styles.main} aria-labelledby="payment-title">
+        <h1 id="payment-title" className={styles.title}>Razorpay Checkout</h1>
+        <p className={styles.description}>Create a test order and verify the Checkout signature on the server.</p>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <TextField
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            value={amount}
+            onChange={handleAmountChange}
+            className={styles.amountInput}
+            placeholder="Enter amount"
+            label="Amount in INR"
+            error={Boolean(amountError)}
+            helperText={amountError || `Enter ₹${MIN_AMOUNT}–₹${MAX_AMOUNT}.`}
+            disabled={isLoading}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><CurrencyRupeeIcon /></InputAdornment>
+            }}
+          />
+          <Button type="submit" variant="contained" disabled={isLoading} className={styles.submitButton}>
+            {isLoading ? <CircularProgress size={22} color="inherit" /> : "Make payment"}
+          </Button>
+        </form>
+      </section>
+    </main>
+  );
+}

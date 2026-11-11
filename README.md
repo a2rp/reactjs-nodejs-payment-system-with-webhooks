@@ -1,14 +1,47 @@
+﻿# React, Express, and Razorpay Checkout
 
+A small full-stack demo that creates Razorpay test orders from an Express API, opens Checkout in a React UI, verifies Checkout signatures on the server, and validates signed webhook requests.
 
+## Requirements
 
-![Screenshot 2024-04-29 030912](https://github.com/a2rp/reactjs-nodejs-payment-system-with-webhooks/assets/5670738/ccc1a26c-138e-4867-bddf-1a0be803b57d)
+- Node.js 18 or newer
+- npm
+- A Razorpay test account and test API credentials
 
+## Run locally
 
-![Screenshot 2024-04-29 030953](https://github.com/a2rp/reactjs-nodejs-payment-system-with-webhooks/assets/5670738/59c6f3ac-9c7e-4609-9daa-835777e26004)
+1. Copy `backend/.env.example` to `backend/.env` and add your Razorpay test key ID, key secret, and a webhook secret. Keep these values private.
+2. Copy `frontend/.env.example` to `frontend/.env` if the API uses a different address.
+3. Install and start the API:
 
+   ```sh
+   cd backend
+   npm install
+   npm start
+   ```
 
-![Screenshot 2024-04-29 031008](https://github.com/a2rp/reactjs-nodejs-payment-system-with-webhooks/assets/5670738/5287ac44-1423-49b4-b15d-fbee210d4c70)
+4. In another terminal, start the frontend:
 
+   ```sh
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-![Screenshot 2024-04-29 031101](https://github.com/a2rp/reactjs-nodejs-payment-system-with-webhooks/assets/5670738/df346cc8-b35e-4d3e-9e09-9efaa6f21e92)
+5. Open `http://localhost:5173`. The browser origin must match `FRONTEND_ORIGIN` in the backend environment.
 
+The demo accepts integer amounts from ₹501 through ₹9,999. Use Razorpay test credentials and test payment details only.
+
+## API
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/order/create` | Validates the rupee amount and creates a Razorpay order. |
+| `POST` | `/api/order/verify-payment` | Verifies Checkout's order/payment signature with the server key secret. |
+| `POST` | `/api/webhooks/razorpay` | Validates the HMAC signature over the exact raw webhook body. |
+
+Configure the Razorpay webhook URL to point to `/api/webhooks/razorpay` and set the same webhook secret in `RAZORPAY_WEBHOOK_SECRET`. For local webhook testing, expose the backend through a trusted HTTPS tunnel and configure that URL in the Razorpay dashboard.
+
+## Scope and limitations
+
+This is an integration example, not a production payment system. Webhooks are signature-checked and acknowledged, but the app has no database, duplicate-event store, order state, or fulfillment logic. The Checkout callback verifies the signature but does not replace server-side reconciliation or webhook processing. Do not use this demo to fulfill real orders.
